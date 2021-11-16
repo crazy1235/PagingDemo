@@ -3,12 +3,14 @@ package com.syan1.pagingdemo
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.paging.PagingDataAdapter
+import androidx.paging.PagedListAdapter
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.android.synthetic.main.repo_view_item.view.*
 
-class RepoListAdapter : PagingDataAdapter<RepoBean, RepoViewHolder>(diff) {
+class RepoListAdapter : PagedListAdapter<RepoBean, RepoViewHolder>(diff) {
+
+    var onItemClick: ((position: Int) -> Unit)? = null
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RepoViewHolder {
         val view = LayoutInflater.from(parent.context)
@@ -17,12 +19,18 @@ class RepoListAdapter : PagingDataAdapter<RepoBean, RepoViewHolder>(diff) {
     }
 
     override fun onBindViewHolder(holder: RepoViewHolder, position: Int) {
-        getItem(position)?.let { holder.bindData(it) }
+        getItem(position)?.let {
+            holder.itemView.setOnClickListener {
+                onItemClick?.invoke(position)
+            }
+            holder.bindData(it, position)
+        }
     }
 }
 
 class RepoViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
-    fun bindData(repoBean: RepoBean) {
+    fun bindData(repoBean: RepoBean, position: Int) {
+        view.positionView.text = "$position"
         view.repo_name.text = repoBean.fullName
         if (repoBean.description != null) {
             view.repo_description.visibility = View.VISIBLE
@@ -41,7 +49,7 @@ class RepoViewHolder(private val view: View) : RecyclerView.ViewHolder(view) {
     }
 }
 
-val diff = object : DiffUtil.ItemCallback<RepoBean>() {
+private val diff = object : DiffUtil.ItemCallback<RepoBean>() {
     override fun areItemsTheSame(oldItem: RepoBean, newItem: RepoBean): Boolean {
         return oldItem.id == newItem.id
     }
@@ -49,5 +57,4 @@ val diff = object : DiffUtil.ItemCallback<RepoBean>() {
     override fun areContentsTheSame(oldItem: RepoBean, newItem: RepoBean): Boolean {
         return oldItem == newItem
     }
-
 }

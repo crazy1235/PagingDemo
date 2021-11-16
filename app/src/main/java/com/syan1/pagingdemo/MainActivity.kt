@@ -1,87 +1,105 @@
 package com.syan1.pagingdemo
 
-import android.annotation.SuppressLint
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
 import androidx.lifecycle.lifecycleScope
-import androidx.paging.LoadState
-import androidx.paging.PagingData
-import androidx.paging.cachedIn
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
+import com.syan1.pagingdemo.base.BaseActivity
+import com.syan1.pagingdemo.base.LoadState
+import com.syan1.pagingdemo.base.loadPagedData
+import com.syan1.pagingdemo.base.refresh
+import com.uber.autodispose.autoDispose
 import io.reactivex.Observable
-import io.reactivex.Single
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.android.synthetic.main.activity_main.view.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.subscribe
-import kotlinx.coroutines.launch
-import kotlin.coroutines.suspendCoroutine
 
 const val TAG = "paging3---"
 
-@ExperimentalCoroutinesApi
-class MainActivity : AppCompatActivity() {
+class MainActivity : BaseActivity() {
 
+    private val viewModel = RepoViewModel(this, this.lifecycleScope)
+    private val adapter = RepoListAdapter()
 
-    @SuppressLint("CheckResult")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val viewModel = RepoViewModel()
-
-        var pagingData: Flow<PagingData<RepoBean>>? = null
-        var pagingRxData : Observable<PagingData<RepoBean>>? = null
-
-        val adapter = RepoListAdapter()
         val decoration = DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
         recyclerView.addItemDecoration(decoration)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = adapter
 
-        adapter.addLoadStateListener { state ->
-            val currentStates = state.source
-            Log.i(TAG, "addLoadStateListener: $state")
-            swipeRefreshLayout.isRefreshing = state.refresh is LoadState.Loading
-//            // 如果append没有处于加载状态，但是refreshLayout出于加载状态，refreshLayout停止加载状态
-//            if (state.append is LoadState.NotLoading && swipeRefreshLayout.isRefreshing) {
-//                swipeRefreshLayout.isRefreshing = false
-//            }
-//            // 如果refresh没有出于加载状态，但是refreshLayout出于刷新状态，refreshLayout停止刷新
-//            if (state.source.refresh is LoadState.NotLoading && swipeRefreshLayout.isRefreshing) {
-//                swipeRefreshLayout.isRefreshing = false
-//            }
+//        viewModel.repoLiveData.observe(this, Observer(adapter::submitList))
+
+//        viewModel.loadData("android")
+//        viewModel.repoRxData.autoDispose(this).subscribe({ adapter.submitList(it) }, {})
+
+        adapter.onItemClick = {
+            Toast.makeText(this, "position: $it", Toast.LENGTH_SHORT).show()
         }
-
-//        pagingData = viewModel.searchRepos("Android")
-        pagingRxData = viewModel.searchReposUseRx("Android")
-
-        lifecycleScope.launch {
-
-            pagingRxData.subscribe {
-                GlobalScope.launch (Dispatchers.IO) {
-                    adapter.submitData(it)
-                }
-            }
-
-            pagingData?.collectLatest {
-                recyclerView.scrollToPosition(0)
-                adapter.submitData(it)
-            }
-        }
-
 
         swipeRefreshLayout.setOnRefreshListener {
-            pagingData = viewModel.searchRepos("iOS")
+//            viewModel.refresh()
             adapter.refresh()
         }
 
+        viewModel.loadState.observe(this) {
+            executeLoadState(it)
+        }
+
+        executeWithRx()
     }
+
+    private fun executeLoadState(loadState: LoadState) {
+        Log.i(TAG, "onCreate: loadState: $loadState -- ${adapter.currentList?.size}")
+
+        if (loadState is LoadState.Failed) {
+            Log.e(TAG, "load error: ${loadState.throwable.toString()}")
+        } else {
+            swipeRefreshLayout.isRefreshing =
+                loadState is LoadState.Loading && loadState.isFirstPage
+        }
+    }
+
+    /**
+     * {@link PagedListAdapterExt }
+     */
+    private fun executeWithAdapterExt() {
+        adapter.loadPagedData(
+            loadOnePageDataCallback = {
+                getSearchObservable("vue", it)
+            },
+            scopeProvider = this,
+            lifecycleOwner = this,
+            loadStateObserver = {
+                executeLoadState(it)
+            }
+        )
+    }
+
+    private fun executeWithRx() {
+        viewModel.repoRxData.autoDispose(this)
+            .subscribe({
+                adapter.submitList(it)
+            }, {
+
+            })
+    }
+
+    private fun executeWithLiveData() {
+        viewModel.repoLiveData.observe(this) {
+            adapter.submitList(it)
+        }
+    }
+
+    private fun getSearchObservable(
+        queryString: String,
+        pageIndex: Int
+    ): Observable<Pair<List<RepoBean>, Int>> {
+        return ApiService.getUserService()
+            .searchReposObservable("${queryString}in:name,description", pageIndex, 10)
+            .map { it.items to 25 }
+    }
+
 }

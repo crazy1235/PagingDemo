@@ -3,6 +3,7 @@ plugins {
     id 'org.jetbrains.kotlin.android'
     id 'kotlin-android'
     id 'kotlin-android-extensions'
+    id 'kotlin-kapt'
 }
 
 android {
@@ -50,13 +51,9 @@ dependencies {
     def rx2androidVersion = '2.1.1'
     implementation "io.reactivex.rxjava2:rxandroid:$rx2androidVersion"
 
-//    def paging_version = "2.1.2"
-    def paging_version = "3.0.1"
-    implementation "androidx.paging:paging-runtime-ktx:$paging_version"
-    // For Kotlin use paging-runtime-ktx
-    // optional - RxJava support
-    implementation "androidx.paging:paging-rxjava2-ktx:$paging_version"
-    // For Kotlin use paging-rxjava2-ktx
+    def paging2_version = "2.1.2"
+    implementation "androidx.paging:paging-runtime-ktx:$paging2_version"
+    implementation "androidx.paging:paging-rxjava2-ktx:$paging2_version"
 
     def retrofit2Version = "2.9.0"
     implementation "com.squareup.retrofit2:adapter-rxjava2:${retrofit2Version}"
@@ -70,4 +67,17 @@ dependencies {
 
     def gsonVersion = '2.6.2'
     implementation "com.google.code.gson:gson:${gsonVersion}"
+
+    //noinspection LifecycleAnnotationProcessorWithJava8
+    kapt "androidx.lifecycle:lifecycle-compiler:2.4.0"
+//    implementation "androidx.lifecycle:lifecycle-common-java8:2.4.0"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:2.4.0"
+    implementation "androidx.lifecycle:lifecycle-extensions:2.2.0"
+
+    def uberAutoVersion = '1.1.0'
+    implementation "com.uber.autodispose:autodispose-ktx:${uberAutoVersion}"
+    implementation "com.uber.autodispose:autodispose-lifecycle-ktx:${uberAutoVersion}"
+    implementation "com.uber.autodispose:autodispose-android:${uberAutoVersion}"
+    implementation 'com.uber.autodispose:autodispose-android-archcomponents:1.4.0'
+
 }
