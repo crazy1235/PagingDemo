@@ -32,11 +32,14 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-
         val decoration = DividerItemDecoration(this, DividerItemDecoration.VERTICAL)
         recyclerView.addItemDecoration(decoration)
         recyclerView.layoutManager = LinearLayoutManager(this)
-        recyclerView.adapter = adapter
+
+        recyclerView.adapter = adapter.withLoadStateFooter(LoadStateAdapter {
+            // todo retry
+            adapter.retry()
+        })
 
         adapter.addLoadStateListener { loadState ->
             Log.i(TAG, "addLoadStateListener: $loadState")
